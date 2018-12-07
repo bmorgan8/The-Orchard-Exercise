@@ -1,0 +1,118 @@
+
+CREATE TABLE [dbo].[BM_DOHMH_New_York_City_Restaurant_RawFile] (
+[CAMIS] nvarchar(255),
+[DBA] nvarchar(255),
+[BORO] nvarchar(255),
+[BUILDING] nvarchar(255),
+[STREET] nvarchar(255),
+[ZIPCODE] nvarchar(255),
+[PHONE] nvarchar(255),
+[CUISINE DESCRIPTION] nvarchar(255),
+[INSPECTION DATE] datetime,
+[ACTION] nvarchar(255),
+[VIOLATION CODE] nvarchar(255),
+[VIOLATION DESCRIPTION] nvarchar(max),
+[CRITICAL FLAG] nvarchar(255),
+[SCORE] numeric(18,7),
+[GRADE] nvarchar(255),
+[GRADE DATE] datetime,
+[RECORD DATE] datetime,
+[INSPECTION TYPE] nvarchar(255)
+)
+
+--Create Restaurant Master Table
+IF OBJECT_ID('TEMPDB..#BM_DOHMH_New_York_City_Restaurant_Master') IS NOT NULL
+	DROP TABLE #BM_DOHMH_New_York_City_Restaurant_Master
+
+SELECT DISTINCT 
+  CAMIS
+	, DBA [RESTAURANT NAME]
+	, BUILDING [BUILDING NUMBER]
+	, STREET
+	, BORO
+	, ZIPCODE
+	, CONCAT(LTRIM(RTRIM(BUILDING)), ' ', LTRIM(RTRIM(STREET)), ' ' , LTRIM(RTRIM(BORO)), ' ' , 'NY', ' ' , LTRIM(RTRIM(ZIPCODE))) [FULL ADDRESS]
+	, PHONE [PHONE NUMBER]
+	, [CUISINE DESCRIPTION] [CUISINE]
+INTO #BM_DOHMH_New_York_City_Restaurant_Master
+FROM [dbo].[BM_DOHMH_New_York_City_Restaurant_RawFile]
+ORDER BY CAMIS
+--(26856 row(s) affected)
+
+--Create Inspection Information Master Table
+IF OBJECT_ID('TEMPDB..#BM_DOHMH_New_York_City_Inspection_Information') IS NOT NULL
+	DROP TABLE #BM_DOHMH_New_York_City_Inspection_Information
+
+Select distinct 
+  CAMIS
+	, [INSPECTION DATE]
+	, [INSPECTION TYPE]
+	, ACTION
+	, [VIOLATION CODE]
+	, [VIOLATION DESCRIPTION]
+	, [GRADE DATE]
+	, SCORE
+	, GRADE
+into #BM_DOHMH_New_York_City_Inspection_Information
+from [dbo].[BM_DOHMH_New_York_City_Restaurant_RawFile]
+--(383393 row(s) affected)
+
+--Create Latest Inspection Date table for each restaurant
+IF OBJECT_ID('TEMPDB..#LatestInspectionDate') IS NOT NULL
+	DROP TABLE #LatestInspectionDate
+
+Select 
+  CAMIS
+	, MAX([GRADE DATE]) latest_dt
+into #LatestInspectionDate
+from #BM_DOHMH_New_York_City_Inspection_Information
+where isnull(GRADE, '') <> ''
+group by CAMIS
+--(25811 row(s) affected)
+
+
+--Creating Inspection Table for only the latest inspection for each restaurant
+IF OBJECT_ID('TEMPDB..#BM_DOHMH_New_York_City_Graded_Inspection_Information') IS NOT NULL
+	DROP TABLE #BM_DOHMH_New_York_City_Graded_Inspection_Information
+
+Select 
+  a.*
+into #BM_DOHMH_New_York_City_Graded_Inspection_Information
+from #BM_DOHMH_New_York_City_Inspection_Information a
+join #LatestInspectionDate b
+	on a.CAMIS = b.CAMIS
+	and a.[GRADE DATE] = b.latest_dt
+where isnull(a.GRADE ,'') <> ''
+order by a.CAMIS
+--(59521 row(s) affected)
+
+--Creating the Restaurant Final Table with Grade Information
+IF OBJECT_ID('TEMPDB..#Restaurant_Grade_Information') IS NOT NULL
+	DROP TABLE #Restaurant_Grade_Information
+
+Select distinct 
+  a.*, 
+	b.[INSPECTION DATE], 
+	b.SCORE, 
+	b.GRADE, 
+	b.[GRADE DATE]
+into #Restaurant_Grade_Information
+From #BM_DOHMH_New_York_City_Restaurant_Master a
+join #BM_DOHMH_New_York_City_Graded_Inspection_Information b
+on a.CAMIS = b.CAMIS
+--(25258 row(s) affected)
+
+--Updating Restaurant Final Table with the Rank for each Cuisine
+ALTER TABLE #Restaurant_Grade_Information
+ADD [Restaurant Rank] numeric
+Go
+
+Update A
+Set A.[Restaurant Rank] = b.[Rank]
+From #Restaurant_Grade_Information A
+Left Join (Select *, 
+	ROW_NUMBER() over (Partition by Cuisine order by score asc, [Inspection Date] asc) as [Rank]
+	from #Restaurant_Grade_Information
+	where GRADE in ('A','B', 'C')) b
+on a.CAMIS = b.CAMIS
+--(25258 row(s) affected)
