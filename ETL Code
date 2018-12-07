@@ -1,23 +1,23 @@
 
 CREATE TABLE [dbo].[BM_DOHMH_New_York_City_Restaurant_RawFile] (
-[CAMIS] nvarchar(255),
-[DBA] nvarchar(255),
-[BORO] nvarchar(255),
-[BUILDING] nvarchar(255),
-[STREET] nvarchar(255),
-[ZIPCODE] nvarchar(255),
-[PHONE] nvarchar(255),
-[CUISINE DESCRIPTION] nvarchar(255),
-[INSPECTION DATE] datetime,
-[ACTION] nvarchar(255),
-[VIOLATION CODE] nvarchar(255),
-[VIOLATION DESCRIPTION] nvarchar(max),
-[CRITICAL FLAG] nvarchar(255),
-[SCORE] numeric(18,7),
-[GRADE] nvarchar(255),
-[GRADE DATE] datetime,
-[RECORD DATE] datetime,
-[INSPECTION TYPE] nvarchar(255)
+	[CAMIS] nvarchar(255),
+	[DBA] nvarchar(255),
+	[BORO] nvarchar(255),
+	[BUILDING] nvarchar(255),
+	[STREET] nvarchar(255),
+	[ZIPCODE] nvarchar(255),
+	[PHONE] nvarchar(255),
+	[CUISINE DESCRIPTION] nvarchar(255),
+	[INSPECTION DATE] datetime,
+	[ACTION] nvarchar(255),
+	[VIOLATION CODE] nvarchar(255),
+	[VIOLATION DESCRIPTION] nvarchar(max),
+	[CRITICAL FLAG] nvarchar(255),
+	[SCORE] numeric(18,7),
+	[GRADE] nvarchar(255),
+	[GRADE DATE] datetime,
+	[RECORD DATE] datetime,
+	[INSPECTION TYPE] nvarchar(255)
 )
 
 --Create Restaurant Master Table
@@ -25,7 +25,7 @@ IF OBJECT_ID('TEMPDB..#BM_DOHMH_New_York_City_Restaurant_Master') IS NOT NULL
 	DROP TABLE #BM_DOHMH_New_York_City_Restaurant_Master
 
 SELECT DISTINCT 
-  CAMIS
+  	CAMIS
 	, DBA [RESTAURANT NAME]
 	, BUILDING [BUILDING NUMBER]
 	, STREET
@@ -44,7 +44,7 @@ IF OBJECT_ID('TEMPDB..#BM_DOHMH_New_York_City_Inspection_Information') IS NOT NU
 	DROP TABLE #BM_DOHMH_New_York_City_Inspection_Information
 
 Select distinct 
-  CAMIS
+  	CAMIS
 	, [INSPECTION DATE]
 	, [INSPECTION TYPE]
 	, ACTION
@@ -62,7 +62,7 @@ IF OBJECT_ID('TEMPDB..#LatestInspectionDate') IS NOT NULL
 	DROP TABLE #LatestInspectionDate
 
 Select 
-  CAMIS
+  	CAMIS
 	, MAX([GRADE DATE]) latest_dt
 into #LatestInspectionDate
 from #BM_DOHMH_New_York_City_Inspection_Information
@@ -91,7 +91,7 @@ IF OBJECT_ID('TEMPDB..#Restaurant_Grade_Information') IS NOT NULL
 	DROP TABLE #Restaurant_Grade_Information
 
 Select distinct 
-  a.*, 
+  	a.*, 
 	b.[INSPECTION DATE], 
 	b.SCORE, 
 	b.GRADE, 
